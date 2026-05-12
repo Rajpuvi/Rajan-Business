@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Rajan Business"/>
+  <title>Rajan — Business Manager</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;min-height:100vh;}
+    input,select,textarea,button{font-family:inherit;}
+    ::-webkit-scrollbar{width:4px;height:4px;}
+    ::-webkit-scrollbar-track{background:#f1f5f9;}
+    ::-webkit-scrollbar-thumb{background:#cbd5e0;border-radius:2px;}
+    @media print{
+      @page{size:A4 portrait;margin:10mm 12mm;}
+      html,body{margin:0!important;padding:0!important;background:white!important;}
+      body>*{display:none!important;}
+      #a4print{display:block!important;}
+      #a4print{width:100%;font-family:Georgia,serif;font-size:10.5pt;color:#000;background:white;}
+      .no-print{display:none!important;}
+      .doc-header{background:#1a1a2e!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .doc-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .doc-table thead tr{background:#1a1a2e!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .doc-table tbody tr:nth-child(even){background:#f8f8f8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .doc-total-bar{background:#1a1a2e!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+      .shop-head{background:#ede9fe!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    }
+    @media screen{#a4print{display:block;}}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div id="a4print" style="display:none"></div>
+
+<script type="text/babel">
+const {useState,useRef,useEffect}=React;
+
+/* ── Owner ── */
+const OWNER={name:"Rajan",phone:"0773419896",email:"Barajan1992@gmail.com"};
+
+/* ── Preset Rates ── */
+const PRESETS={
+  wiring:[
+    {id:"w1",name:"Point",unit:"Nos",defaultRate:1200},
+    {id:"w2",name:"ABC Box Fixing",unit:"Nos",defaultRate:4500},
+    {id:"w3",name:"Plug Change",unit:"Nos",defaultRate:500},
+    {id:"w4",name:"Holder Change",unit:"Nos",defaultRate:500},
+    {id:"w5",name:"Fan (with wiring)",unit:"Nos",defaultRate:1600},
+    {id:"w6",name:"Fan (without wiring)",unit:"Nos",defaultRate:1000},
+    {id:"w7",name:"Switch Board",unit:"Nos",defaultRate:350},
+    {id:"w8",name:"Wire 2.5mm",unit:"Roll",defaultRate:1800},
+    {id:"w9",name:"Labour (full day)",unit:"Day",defaultRate:2500},
+  ],
+  plumbing:[
+    {id:"p1",name:"PVC Pipe 4inch",unit:"Nos",defaultRate:180},
+    {id:"p2",name:"PVC Pipe 2inch",unit:"Nos",defaultRate:120},
+    {id:"p3",name:"Tap Fitting",unit:"Nos",defaultRate:500},
+    {id:"p4",name:"Toilet Fitting",unit:"Nos",defaultRate:2000},
+    {id:"p5",name:"Basin Fitting",unit:"Nos",defaultRate:1500},
+    {id:"p6",name:"Pipe Joint / Elbow",unit:"Nos",defaultRate:50},
+    {id:"p7",name:"Labour (full day)",unit:"Day",defaultRate:2500},
+  ],
+  painting:[
+    {id:"pt1",name:"Interior Paint (sqft)",unit:"Sqft",defaultRate:15},
+    {id:"pt2",name:"Exterior Paint (sqft)",unit:"Sqft",defaultRate:20},
+    {id:"pt3",name:"Primer Coat",unit:"Sqft",defaultRate:8},
+    {id:"pt4",name:"Wall Putty",unit:"Sqft",defaultRate:12},
+    {id:"pt5",name:"Paint (1 litre)",unit:"Ltr",defaultRate:600},
+    {id:"pt6",name:"Labour (full day)",unit:"Day",defaultRate:2500},
+  ],
+  welding:[
+    {id:"wl1",name:"Gate Welding",unit:"Nos",defaultRate:8000},
+    {id:"wl2",name:"Grille (per sqft)",unit:"Sqft",defaultRate:350},
+    {id:"wl3",name:"Railing (per foot)",unit:"Feet",defaultRate:400},
+    {id:"wl4",name:"Frame Welding",unit:"Nos",defaultRate:2000},
+    {id:"wl5",name:"Rod / MS Flat (per kg)",unit:"Kg",defaultRate:120},
+    {id:"wl6",name:"Labour (full day)",unit:"Day",defaultRate:2500},
+  ],
+  other:[],
+};
+
+const WORK_TYPES=[
+  {id:"wiring",label:"Wiring",icon:"⚡",color:"#d97706",light:"#fffbeb"},
+  {id:"plumbing",label:"Plumbing",icon:"🚰",color:"#2563eb",light:"#eff6ff"},
+  {id:"painting",label:"Painting",icon:"🎨",color:"#059669",light:"#f0fdf4"},
+  {id:"welding",label:"Welding",icon:"🔧",color:"#dc2626",light:"#fef2f2"},
+  {id:"other",label:"Other",icon:"🛠️",color:"#7c3aed",light:"#f5f3ff"},
+];
+const STATUS={
+  pending:{label:"Pending",color:"#d97706",bg:"#fffbeb"},
+  ongoing:{label:"Ongoing",color:"#2563eb",bg:"#eff6ff"},
+  completed:{label:"Completed",color:"#059669",bg:"#f0fdf4"},
+  cancelled:{label:"Cancelled",color:"#dc2626",bg:"#fef2f2"},
+};
+const PAY={
+  unpaid:{label:"Unpaid",color:"#dc2626"},
+  partial:{label:"Partial",color:"#d97706"},
+  paid:{label:"Paid",color:"#059669"},
+};
+const UNITS=["Nos","Roll","Kg","Ltr","Feet","Meter","Sqft","Work","Day","Box","Set","Pair"];
+
+function uid(){return "X"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();}
+function today(){return new Date().toISOString().slice(0,10);}
+function fmtD(d){return d?new Date(d).toLocaleDateString("en-GB"):"";}
+function Rs(n){return "Rs. "+Number(n||0).toLocaleString("en-IN");}
+
+/* ── localStorage helpers ── */
+function loadData(){
+  try{
+    const d=localStorage.getItem("rajan_projects");
+    return d?JSON.parse(d):[];
+  }catch{return [];}
+}
+function saveData(projects){
+  try{localStorage.setItem("rajan_projects",JSON.stringify(projects));}catch{}
+}
+function loadLogo(){
+  try{return localStorage.getItem("rajan_logo")||null;}catch{return null;}
+}
+function saveLogo(url){
+  try{
+    // Store compressed logo
+    if(url && url.length < 500000) localStorage.setItem("rajan_logo",url);
+  }catch{}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════════════ */
+function App(){
+  const [view,setView]=useState("dashboard");
+  const [projects,setProjects]=useState(loadData);
+  const [filter,setFilter]=useState("all");
+  const [showForm,setShowForm]=useState(false);
+  const [editProj,setEditProj]=useState(null);
+  const [docProj,setDocProj]=useState(null);
+  const [docType,setDocType]=useState("quotation");
+  const [logoUrl,setLogoUrl]=useState(loadLogo);
+  const [showRates,setShowRates]=useState(false);
+  const [alerts,setAlerts]=useState([]);
+  const logoRef=useRef();
+
+  /* persist projects */
+  useEffect(()=>{saveData(projects);},[projects]);
+
+  /* reminders */
+  useEffect(()=>{
+    const tod=today();
+    setAlerts(projects.filter(p=>p.reminder&&p.reminder<=tod&&p.payStatus!=="paid"));
+  },[projects]);
+
+  /* render doc to print div */
+  useEffect(()=>{
+    const el=document.getElementById("a4print");
+    if(!el) return;
+    if(view==="doc"&&docProj){
+      const root2=ReactDOM.createRoot?ReactDOM.createRoot(el):null;
+      if(root2) root2.render(React.createElement(A4Doc,{project:docProj,type:docType,logoUrl,owner:OWNER,itemsT,shopT,grandTotal,bal}));
+    } else {
+      el.innerHTML="";
+    }
+  },[view,docProj,docType,logoUrl]);
+
+  function itemsT(p){return p.items.reduce((a,i)=>a+i.total,0);}
+  function shopT(p){return (p.shopPurchases||[]).reduce((a,i)=>a+i.total,0);}
+  function grandTotal(p){return itemsT(p)+shopT(p);}
+  function bal(p){return grandTotal(p)-(p.received||0);}
+
+  const totalContract=projects.reduce((s,p)=>s+grandTotal(p),0);
+  const totalReceived=projects.reduce((s,p)=>s+(p.received||0),0);
+  const totalBalance=totalContract-totalReceived;
+
+  function saveProject(proj){
+    setProjects(ps=>proj._new?[...ps,{...proj,_new:undefined,id:uid()}]:ps.map(p=>p.id===proj.id?proj:p));
+    setShowForm(false);setEditProj(null);
+  }
+  function delProject(id){if(window.confirm("Delete this project?"))setProjects(ps=>ps.filter(p=>p.id!==id));}
+  function openDoc(proj,type){setDocProj(proj);setDocType(type);setView("doc");setTimeout(()=>window.scrollTo(0,0),50);}
+
+  function onLogo(e){
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      // Compress if too large
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement("canvas");
+        const max=200;
+        let w=img.width,h=img.height;
+        if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+        canvas.width=w;canvas.height=h;
+        canvas.getContext("2d").drawImage(img,0,0,w,h);
+        const compressed=canvas.toDataURL("image/png",0.8);
+        setLogoUrl(compressed);
+        saveLogo(compressed);
+      };
+      img.src=ev.target.result;
+    };
+    r.readAsDataURL(f);
+  }
+
+  const filtered=filter==="all"?projects:projects.filter(p=>p.type===filter);
+
+  const S=(s={})=>({...s});
+  const navItems=[
+    {id:"dashboard",icon:"⊞",label:"Dashboard"},
+    {id:"projects",icon:"☑",label:"Projects"},
+    {id:"reminders",icon:"🔔",label:"Reminders",badge:alerts.length},
+    {id:"accounts",icon:"📊",label:"Accounts"},
+  ];
+
+  return React.createElement("div",{style:{minHeight:"100vh",background:"#f0f2f5"}},
+
+    /* Top bar */
+    React.createElement("div",{className:"no-print",style:{background:"#1a1a2e",padding:"14px 16px 0",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 12px #0008"}},
+      React.createElement("div",{style:{maxWidth:740,margin:"0 auto"}},
+        React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:10}},
+          React.createElement("div",{onClick:()=>logoRef.current?.click(),style:{width:46,height:46,borderRadius:10,overflow:"hidden",background:logoUrl?"#fff":"#16213e",border:"2px solid #0f3460",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+            logoUrl?React.createElement("img",{src:logoUrl,style:{width:"100%",height:"100%",objectFit:"contain"}}):React.createElement("span",{style:{fontSize:22,opacity:.4}},"🖼")
+          ),
+          React.createElement("input",{ref:logoRef,type:"file",accept:"image/*",onChange:onLogo,style:{display:"none"}}),
+          React.createElement("div",{style:{flex:1}},
+            React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:17}},OWNER.name+" — Contractor"),
+            React.createElement("div",{style:{color:"#718096",fontSize:11}},OWNER.phone)
+          ),
+          React.createElement("div",{style:{display:"flex",gap:8,alignItems:"center"}},
+            React.createElement("button",{onClick:()=>setShowRates(true),style:{padding:"6px 10px",borderRadius:8,border:"1px solid #0f3460",background:"#16213e",color:"#94a3b8",cursor:"pointer",fontSize:11,fontWeight:600}},"⚙️ Rates"),
+            React.createElement("div",{style:{textAlign:"right"}},
+              React.createElement("div",{style:{color:"#68d391",fontWeight:800,fontSize:13}},Rs(totalReceived)),
+              React.createElement("div",{style:{color:"#fc8181",fontSize:10,fontWeight:600}},Rs(totalBalance)+" due")
+            )
+          )
+        ),
+        !logoUrl&&React.createElement("div",{onClick:()=>logoRef.current?.click(),style:{background:"#16213e",border:"1px dashed #0f3460",borderRadius:8,padding:"5px 12px",marginBottom:8,cursor:"pointer",display:"flex",gap:8,alignItems:"center"}},
+          React.createElement("span",null,"🖼"),
+          React.createElement("span",{style:{color:"#718096",fontSize:12}},"Logo upload பண்ணு — Quotation & Bill-ல show ஆகும்")
+        ),
+        React.createElement("div",{style:{display:"flex",gap:4}},
+          navItems.map(n=>React.createElement("button",{key:n.id,onClick:()=>setView(n.id),style:{flex:1,padding:"8px 2px 10px",borderRadius:"8px 8px 0 0",border:"none",background:view===n.id?"#f0f2f5":"transparent",color:view===n.id?"#1a1a2e":"#718096",cursor:"pointer",fontSize:11,fontWeight:view===n.id?700:400,position:"relative"}},
+            React.createElement("div",{style:{fontSize:15}},n.icon),
+            n.label,
+            n.badge>0&&React.createElement("span",{style:{position:"absolute",top:4,right:"50%",transform:"translateX(12px)",background:"#dc2626",color:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}},n.badge)
+          ))
+        )
+      )
+    ),
+
+    /* Content */
+    React.createElement("div",{className:"no-print",style:{maxWidth:740,margin:"0 auto",padding:"16px"}},
+
+      /* DASHBOARD */
+      view==="dashboard"&&React.createElement("div",null,
+        alerts.length>0&&React.createElement("div",{style:{background:"#fff5f5",border:"1px solid #fc8181",borderRadius:14,padding:"12px 16px",marginBottom:14}},
+          React.createElement("div",{style:{color:"#c53030",fontWeight:700,fontSize:13,marginBottom:8}},"🔔 "+alerts.length+" Reminder Due!"),
+          alerts.map(r=>React.createElement("div",{key:r.id,style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderTop:"1px solid #fed7d7"}},
+            React.createElement("div",null,
+              React.createElement("div",{style:{color:"#1a1a2e",fontWeight:600}},r.client),
+              React.createElement("div",{style:{color:"#718096",fontSize:12}},(r.reminderNote||"Follow up")+" · "+fmtD(r.reminder))
+            ),
+            React.createElement("button",{onClick:()=>{setProjects(ps=>ps.map(p=>p.id===r.id?{...p,reminder:""}:p));setAlerts(as=>as.filter(a=>a.id!==r.id));},style:{padding:"4px 10px",borderRadius:8,border:"none",background:"#c53030",color:"#fff",cursor:"pointer",fontSize:12}},"Done")
+          ))
+        ),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:14}},
+          [{l:"Total Contract",v:Rs(totalContract),c:"#2563eb",bg:"#eff6ff"},{l:"Received",v:Rs(totalReceived),c:"#059669",bg:"#f0fdf4"},{l:"Balance Due",v:Rs(totalBalance),c:"#dc2626",bg:"#fef2f2"}].map(s=>
+            React.createElement("div",{key:s.l,style:{background:s.bg,borderRadius:14,padding:"14px 8px",textAlign:"center",border:"1px solid "+s.c+"22"}},
+              React.createElement("div",{style:{fontSize:13,fontWeight:800,color:s.c}},s.v),
+              React.createElement("div",{style:{fontSize:11,color:"#718096",marginTop:2}},s.l)
+            )
+          )
+        ),
+        projects.length===0?React.createElement("div",{style:{background:"#fff",borderRadius:16,padding:"40px 20px",textAlign:"center",border:"2px dashed #e2e8f0"}},
+          React.createElement("div",{style:{fontSize:48,marginBottom:12}},"🏗️"),
+          React.createElement("div",{style:{color:"#1a1a2e",fontWeight:700,fontSize:17,marginBottom:6}},"வணக்கம் Rajan!"),
+          React.createElement("div",{style:{color:"#718096",fontSize:14,marginBottom:20}},"முதல் project add பண்ணு"),
+          React.createElement("button",{onClick:()=>{setEditProj(null);setShowForm(true);setView("projects");},style:{padding:"12px 28px",borderRadius:12,border:"none",background:"#1a1a2e",color:"#fff",fontWeight:700,cursor:"pointer",fontSize:15}},"+ Project Add பண்ணு")
+        ):React.createElement("div",null,
+          React.createElement("div",{style:{background:"#fff",borderRadius:16,padding:16,marginBottom:14,border:"1px solid #e2e8f0"}},
+            React.createElement("div",{style:{color:"#718096",fontSize:11,letterSpacing:2,marginBottom:12,fontFamily:"monospace"}},"WORK TYPE SUMMARY"),
+            WORK_TYPES.map(t=>{
+              const ps=projects.filter(p=>p.type===t.id);
+              if(!ps.length)return null;
+              return React.createElement("div",{key:t.id,style:{display:"flex",alignItems:"center",gap:12,padding:"8px 0",borderBottom:"1px solid #f0f2f5"}},
+                React.createElement("div",{style:{width:36,height:36,borderRadius:10,background:t.light,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}},t.icon),
+                React.createElement("div",{style:{flex:1}},
+                  React.createElement("div",{style:{display:"flex",justifyContent:"space-between"}},
+                    React.createElement("span",{style:{color:"#1a1a2e",fontWeight:600}},t.label),
+                    React.createElement("span",{style:{color:t.color,fontWeight:700}},Rs(ps.reduce((s,p)=>s+grandTotal(p),0)))
+                  ),
+                  React.createElement("div",{style:{color:"#718096",fontSize:12}},ps.length+" project"+(ps.length>1?"s":""))
+                )
+              );
+            }),
+          ),
+          React.createElement("div",{style:{background:"#fff",borderRadius:16,padding:16,marginBottom:14,border:"1px solid #e2e8f0"}},
+            React.createElement("div",{style:{color:"#718096",fontSize:11,letterSpacing:2,marginBottom:10,fontFamily:"monospace"}},"💰 BALANCE PENDING"),
+            projects.filter(p=>p.payStatus!=="paid").length===0
+              ?React.createElement("div",{style:{color:"#059669",textAlign:"center",padding:16}},"எல்லாமே clear! ✅")
+              :projects.filter(p=>p.payStatus!=="paid").map(p=>{
+                const wt=WORK_TYPES.find(t=>t.id===p.type);
+                return React.createElement("div",{key:p.id,style:{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid #f0f2f5"}},
+                  React.createElement("span",{style:{fontSize:20}},wt?.icon),
+                  React.createElement("div",{style:{flex:1}},
+                    React.createElement("div",{style:{color:"#1a1a2e",fontWeight:600}},p.client),
+                    React.createElement("div",{style:{color:"#718096",fontSize:12}},p.location)
+                  ),
+                  React.createElement("div",{style:{textAlign:"right"}},
+                    React.createElement("div",{style:{color:"#dc2626",fontWeight:700}},Rs(bal(p))),
+                    React.createElement("div",{style:{fontSize:11,color:PAY[p.payStatus]?.color}},PAY[p.payStatus]?.label)
+                  )
+                );
+              })
+          )
+        ),
+        React.createElement("button",{onClick:()=>{setEditProj(null);setShowForm(true);setView("projects");},style:{width:"100%",padding:14,borderRadius:14,border:"2px dashed #2563eb55",background:"#eff6ff",color:"#2563eb",cursor:"pointer",fontSize:15,fontWeight:700}},"+ புதிய Project Add பண்ணு")
+      ),
+
+      /* PROJECTS */
+      view==="projects"&&React.createElement("div",null,
+        React.createElement("div",{style:{display:"flex",gap:6,marginBottom:12,overflowX:"auto",paddingBottom:4}},
+          React.createElement("button",{onClick:()=>setFilter("all"),style:{padding:"7px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0,background:filter==="all"?"#1a1a2e":"#e2e8f0",color:filter==="all"?"#fff":"#718096"}},"All ("+projects.length+")"),
+          WORK_TYPES.map(t=>React.createElement("button",{key:t.id,onClick:()=>setFilter(t.id),style:{padding:"7px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,fontWeight:600,flexShrink:0,background:filter===t.id?t.color:"#e2e8f0",color:filter===t.id?"#fff":"#718096"}},t.icon+" "+t.label))
+        ),
+        React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:12,marginBottom:14}},
+          filtered.length===0&&React.createElement("div",{style:{textAlign:"center",padding:"50px 20px",color:"#718096",background:"#fff",borderRadius:16}},React.createElement("div",{style:{fontSize:36,marginBottom:8}},"📋"),"Projects இல்லை"),
+          filtered.map(p=>{
+            const wt=WORK_TYPES.find(t=>t.id===p.type);
+            const gt=grandTotal(p);const b=bal(p);
+            const st=STATUS[p.status];const pay=PAY[p.payStatus];
+            return React.createElement("div",{key:p.id,style:{background:"#fff",borderRadius:16,border:"1px solid #e2e8f0",overflow:"hidden",boxShadow:"0 1px 6px #0001"}},
+              React.createElement("div",{style:{background:wt?.light,padding:"13px 16px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid #e2e8f0"}},
+                React.createElement("div",{style:{width:40,height:40,borderRadius:12,background:wt?.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}},wt?.icon),
+                React.createElement("div",{style:{flex:1}},
+                  React.createElement("div",{style:{color:"#1a1a2e",fontWeight:700,fontSize:15}},p.client),
+                  React.createElement("div",{style:{color:"#718096",fontSize:12}},"📍 "+p.location+" · 📞 "+(p.clientPhone||"—"))
+                ),
+                React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}},
+                  React.createElement("span",{style:{fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:20,background:st?.bg,color:st?.color}},st?.label),
+                  React.createElement("span",{style:{fontSize:11,fontWeight:600,color:pay?.color}},pay?.label)
+                )
+              ),
+              React.createElement("div",{style:{padding:"12px 16px"}},
+                React.createElement("div",{style:{display:"flex",gap:14,marginBottom:10}},
+                  [["Total",Rs(gt),"#1a1a2e"],["Received",Rs(p.received),"#059669"],["Balance",Rs(b),b>0?"#dc2626":"#059669"]].map(([l,v,c])=>
+                    React.createElement("div",{key:l},React.createElement("div",{style:{color:"#718096",fontSize:11}},l),React.createElement("div",{style:{color:c,fontWeight:700,fontSize:14}},v))
+                  )
+                ),
+                React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+                  React.createElement("button",{onClick:()=>openDoc(p,"quotation"),style:{padding:"7px 12px",borderRadius:8,border:"1px solid #ddd",background:"#fff",color:"#2563eb",cursor:"pointer",fontSize:12,fontWeight:600}},"📄 Quotation"),
+                  React.createElement("button",{onClick:()=>openDoc(p,"bill"),style:{padding:"7px 12px",borderRadius:8,border:"1px solid #ddd",background:"#fff",color:"#059669",cursor:"pointer",fontSize:12,fontWeight:600}},"🧾 Bill"),
+                  React.createElement("button",{onClick:()=>{setEditProj(p);setShowForm(true);},style:{padding:"7px 12px",borderRadius:8,border:"1px solid #ddd",background:"#fff",color:"#d97706",cursor:"pointer",fontSize:12,fontWeight:600}},"✏️ Edit"),
+                  React.createElement("button",{onClick:()=>delProject(p.id),style:{padding:"7px 12px",borderRadius:8,border:"1px solid #fecaca",background:"#fef2f2",color:"#dc2626",cursor:"pointer",fontSize:12,fontWeight:600}},"🗑")
+                )
+              )
+            );
+          })
+        ),
+        React.createElement("button",{onClick:()=>{setEditProj(null);setShowForm(true);},style:{width:"100%",padding:14,borderRadius:14,border:"2px dashed #2563eb55",background:"#eff6ff",color:"#2563eb",cursor:"pointer",fontSize:15,fontWeight:700}},"+ புதிய Project Add பண்ணு")
+      ),
+
+      /* REMINDERS */
+      view==="reminders"&&React.createElement("div",null,
+        React.createElement("div",{style:{color:"#718096",fontSize:11,letterSpacing:2,marginBottom:12,fontFamily:"monospace"}},"ALL REMINDERS"),
+        projects.filter(p=>p.reminder).length===0
+          ?React.createElement("div",{style:{textAlign:"center",padding:"60px 20px",color:"#718096",background:"#fff",borderRadius:16}},React.createElement("div",{style:{fontSize:40,marginBottom:10}},"🔔"),"Reminders இல்லை")
+          :projects.filter(p=>p.reminder).map(p=>{
+            const wt=WORK_TYPES.find(t=>t.id===p.type);
+            const overdue=p.reminder<today();const due=p.reminder===today();
+            return React.createElement("div",{key:p.id,style:{background:"#fff",borderRadius:14,padding:"14px 16px",marginBottom:10,border:"1px solid "+(overdue?"#fca5a5":due?"#fde68a":"#e2e8f0"),display:"flex",gap:12,alignItems:"center"}},
+              React.createElement("div",{style:{fontSize:28}},wt?.icon),
+              React.createElement("div",{style:{flex:1}},
+                React.createElement("div",{style:{color:"#1a1a2e",fontWeight:700}},p.client),
+                React.createElement("div",{style:{color:overdue?"#dc2626":due?"#d97706":"#059669",fontWeight:600,fontSize:13,marginTop:2}},(overdue?"⚠️ Overdue":due?"🔔 Today":"📅")+" — "+fmtD(p.reminder)),
+                p.reminderNote&&React.createElement("div",{style:{color:"#4a5568",fontSize:13}},p.reminderNote)
+              ),
+              React.createElement("button",{onClick:()=>setProjects(ps=>ps.map(x=>x.id===p.id?{...x,reminder:""}:x)),style:{padding:"6px 12px",borderRadius:8,border:"none",background:"#f0fdf4",color:"#059669",cursor:"pointer",fontWeight:700,fontSize:12}},"✓ Done")
+            );
+          })
+      ),
+
+      /* ACCOUNTS */
+      view==="accounts"&&React.createElement("div",null,
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}},
+          [{l:"Total Projects",v:projects.length,c:"#2563eb"},{l:"Completed",v:projects.filter(p=>p.status==="completed").length,c:"#059669"},{l:"Total Contract",v:Rs(totalContract),c:"#1a1a2e"},{l:"Total Received",v:Rs(totalReceived),c:"#059669"},{l:"Total Balance",v:Rs(totalBalance),c:"#dc2626"},{l:"Unpaid",v:projects.filter(p=>p.payStatus==="unpaid").length,c:"#dc2626"}].map(s=>
+            React.createElement("div",{key:s.l,style:{background:"#fff",borderRadius:12,padding:"12px 14px",border:"1px solid #e2e8f0"}},
+              React.createElement("div",{style:{color:s.c,fontWeight:800,fontSize:17}},s.v),
+              React.createElement("div",{style:{color:"#718096",fontSize:12,marginTop:2}},s.l)
+            )
+          )
+        ),
+        React.createElement("div",{style:{background:"#fff",borderRadius:16,border:"1px solid #e2e8f0",overflow:"hidden"}},
+          React.createElement("div",{style:{padding:"14px 16px",borderBottom:"1px solid #f0f2f5",color:"#718096",fontSize:11,letterSpacing:2,fontFamily:"monospace"}},"PROJECT-WISE ACCOUNTS"),
+          React.createElement("div",{style:{overflowX:"auto"}},
+            React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:13}},
+              React.createElement("thead",null,React.createElement("tr",{style:{background:"#f8fafc"}},["Client","Type","Total","Received","Balance","Status"].map(h=>React.createElement("th",{key:h,style:{padding:"10px 12px",textAlign:"left",color:"#718096",fontWeight:600,fontSize:11}},h)))),
+              React.createElement("tbody",null,
+                projects.map(p=>{
+                  const wt=WORK_TYPES.find(t=>t.id===p.type);
+                  const gt=grandTotal(p);const b=bal(p);
+                  return React.createElement("tr",{key:p.id,style:{borderTop:"1px solid #f0f2f5"}},
+                    React.createElement("td",{style:{padding:"10px 12px",color:"#1a1a2e",fontWeight:600}},p.client,React.createElement("div",{style:{color:"#718096",fontSize:11,fontWeight:400}},p.location)),
+                    React.createElement("td",{style:{padding:"10px 12px"}},wt?.icon),
+                    React.createElement("td",{style:{padding:"10px 12px",fontWeight:600}},Rs(gt)),
+                    React.createElement("td",{style:{padding:"10px 12px",color:"#059669",fontWeight:600}},Rs(p.received)),
+                    React.createElement("td",{style:{padding:"10px 12px",color:b>0?"#dc2626":"#059669",fontWeight:700}},Rs(b)),
+                    React.createElement("td",{style:{padding:"10px 12px"}},React.createElement("span",{style:{fontSize:11,fontWeight:700,color:PAY[p.payStatus]?.color}},PAY[p.payStatus]?.label))
+                  );
+                }),
+                React.createElement("tr",{style:{borderTop:"2px solid #e2e8f0",background:"#f8fafc"}},
+                  React.createElement("td",{colSpan:2,style:{padding:"10px 12px",fontWeight:800}},"TOTAL"),
+                  React.createElement("td",{style:{padding:"10px 12px",fontWeight:800}},Rs(totalContract)),
+                  React.createElement("td",{style:{padding:"10px 12px",fontWeight:800,color:"#059669"}},Rs(totalReceived)),
+                  React.createElement("td",{style:{padding:"10px 12px",fontWeight:800,color:"#dc2626"}},Rs(totalBalance)),
+                  React.createElement("td",null)
+                )
+              )
+            )
+          )
+        )
+      ),
+
+      /* DOC VIEW */
+      view==="doc"&&docProj&&React.createElement("div",null,
+        React.createElement("div",{style:{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}},
+          React.createElement("button",{onClick:()=>setView("projects"),style:{padding:"8px 16px",borderRadius:10,border:"1px solid #e2e8f0",background:"#fff",color:"#718096",cursor:"pointer",fontSize:13}},"← Back"),
+          React.createElement("button",{onClick:()=>setDocType(d=>d==="quotation"?"bill":"quotation"),style:{padding:"8px 16px",borderRadius:10,border:"1px solid #2563eb44",background:"#eff6ff",color:"#2563eb",cursor:"pointer",fontSize:13,fontWeight:600}},"Switch to "+(docType==="quotation"?"Bill":"Quotation")),
+          React.createElement("button",{onClick:()=>window.print(),style:{padding:"8px 20px",borderRadius:10,border:"none",background:"#1a1a2e",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700,marginLeft:"auto"}},"🖨 Print / PDF")
+        ),
+        React.createElement(A4Doc,{project:docProj,type:docType,logoUrl,owner:OWNER,itemsT,shopT,grandTotal,bal})
+      )
+    ),
+
+    showForm&&React.createElement(ProjectForm,{initial:editProj,onSave:saveProject,onClose:()=>{setShowForm(false);setEditProj(null);}}),
+    showRates&&React.createElement(RatesModal,{onClose:()=>setShowRates(false)})
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RATES MODAL
+══════════════════════════════════════════════════════════════ */
+function RatesModal({onClose}){
+  return React.createElement("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:300,overflowY:"auto",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:16}},
+    React.createElement("div",{style:{background:"#fff",borderRadius:20,width:"100%",maxWidth:560,padding:20,marginTop:8}},
+      React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        React.createElement("h2",{style:{margin:0,fontSize:18,color:"#1a1a2e"}},"⚙️ Default Rate List"),
+        React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#718096"}},"✕")
+      ),
+      React.createElement("div",{style:{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"10px 14px",marginBottom:16,fontSize:13,color:"#92400e"}},"💡 இவை default rates. Project add பண்ணும்போது நீ manually மாத்தலாம்."),
+      WORK_TYPES.filter(t=>(PRESETS[t.id]||[]).length>0).map(t=>
+        React.createElement("div",{key:t.id,style:{marginBottom:16}},
+          React.createElement("div",{style:{color:t.color,fontWeight:700,fontSize:14,marginBottom:8}},t.icon+" "+t.label),
+          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:13}},
+            React.createElement("thead",null,React.createElement("tr",{style:{background:"#f8fafc"}},["Item","Unit","Rate"].map(h=>React.createElement("th",{key:h,style:{padding:"7px 10px",textAlign:h==="Rate"?"right":"left",color:"#718096",fontWeight:600,fontSize:11}},h)))),
+            React.createElement("tbody",null,
+              PRESETS[t.id].map(r=>React.createElement("tr",{key:r.id,style:{borderTop:"1px solid #f0f2f5"}},
+                React.createElement("td",{style:{padding:"7px 10px",color:"#1a1a2e"}},r.name),
+                React.createElement("td",{style:{padding:"7px 10px",color:"#718096"}},r.unit),
+                React.createElement("td",{style:{padding:"7px 10px",textAlign:"right",fontWeight:700,color:t.color}},Rs(r.defaultRate))
+              ))
+            )
+          )
+        )
+      ),
+      React.createElement("button",{onClick:onClose,style:{width:"100%",padding:12,borderRadius:12,border:"none",background:"#1a1a2e",color:"#fff",fontWeight:700,cursor:"pointer",fontSize:14}},"Close")
+    )
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROJECT FORM
+══════════════════════════════════════════════════════════════ */
+function ProjectForm({initial,onSave,onClose}){
+  const blank={_new:true,type:"wiring",client:"",clientPhone:"",clientAddress:"",location:"",status:"pending",date:today(),dueDate:"",desc:"",payType:"cash",items:[],shopPurchases:[],received:0,payStatus:"unpaid",invoiceNo:"INV-"+Date.now().toString().slice(-4),reminder:"",reminderNote:""};
+  const [form,setForm]=useState(initial?{...initial}:blank);
+  const [items,setItems]=useState(initial?[...initial.items]:[]);
+  const [shops,setShops]=useState(initial?[...(initial.shopPurchases||[])]: []);
+  const [newItem,setNI]=useState({name:"",qty:1,unit:"Nos",rate:""});
+  const [newShop,setNS]=useState({shop:"",item:"",qty:1,rate:""});
+  const [tab,setTab]=useState("presets");
+  const [presetVals,setPV]=useState(()=>{
+    const init={};(PRESETS[initial?.type||"wiring"]||[]).forEach(p=>{init[p.id]={qty:"",rate:p.defaultRate};});return init;
+  });
+
+  function changeType(t){
+    setForm(f=>({...f,type:t}));
+    const init={};(PRESETS[t]||[]).forEach(p=>{init[p.id]={qty:"",rate:p.defaultRate};});setPV(init);
+  }
+  function addPreset(preset){
+    const v=presetVals[preset.id]||{};
+    const qty=+v.qty;const rate=+v.rate;
+    if(!qty||!rate)return;
+    const exists=items.find(i=>i.name===preset.name);
+    if(exists){setItems(is=>is.map(i=>i.name===preset.name?{...i,qty:i.qty+qty,rate,total:(i.qty+qty)*rate}:i));}
+    else{setItems(is=>[...is,{id:uid(),name:preset.name,qty,unit:preset.unit,rate,total:qty*rate}]);}
+    setPV(pv=>({...pv,[preset.id]:{...pv[preset.id],qty:""}}));
+  }
+  function addCustom(){
+    if(!newItem.name||!newItem.rate)return;
+    setItems(is=>[...is,{...newItem,id:uid(),qty:+newItem.qty,rate:+newItem.rate,total:+newItem.qty*+newItem.rate}]);
+    setNI({name:"",qty:1,unit:"Nos",rate:""});
+  }
+  function addShop(){
+    if(!newShop.item||!newShop.rate)return;
+    setShops(ss=>[...ss,{...newShop,id:uid(),qty:+newShop.qty,rate:+newShop.rate,total:+newShop.qty*+newShop.rate}]);
+    setNS({shop:"",item:"",qty:1,rate:""});
+  }
+
+  const itemsTotal=items.reduce((a,i)=>a+i.total,0);
+  const shopsTotal=shops.reduce((a,i)=>a+i.total,0);
+  const total=itemsTotal+shopsTotal;
+
+  function save(){
+    if(!form.client.trim()){alert("Client name கொடு!");return;}
+    onSave({...form,items,shopPurchases:shops,received:+form.received||0});
+  }
+
+  const wt=WORK_TYPES.find(t=>t.id===form.type);
+  const presets=PRESETS[form.type]||[];
+  const inp=(s={})=>({padding:"9px 12px",borderRadius:10,border:"1px solid #e2e8f0",fontSize:14,outline:"none",color:"#1a1a2e",background:"#fff",width:"100%",boxSizing:"border-box",...s});
+
+  return React.createElement("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:200,overflowY:"auto",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:16}},
+    React.createElement("div",{style:{background:"#fff",borderRadius:20,width:"100%",maxWidth:640,padding:20,marginTop:8}},
+      React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        React.createElement("h2",{style:{margin:0,fontSize:18,color:"#1a1a2e"}},(initial?"Edit":"New")+" Project"),
+        React.createElement("button",{onClick:onClose,style:{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#718096"}},"✕")
+      ),
+
+      /* Work type */
+      React.createElement("div",{style:{marginBottom:14}},
+        React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:6,letterSpacing:1}},"WORK TYPE"),
+        React.createElement("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+          WORK_TYPES.map(t=>React.createElement("button",{key:t.id,onClick:()=>changeType(t.id),style:{padding:"8px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,background:form.type===t.id?t.color:"#f0f2f5",color:form.type===t.id?"#fff":"#718096"}},t.icon+" "+t.label))
+        )
+      ),
+
+      /* Pay type */
+      React.createElement("div",{style:{marginBottom:14}},
+        React.createElement("div",{style:{display:"flex",gap:10}},
+          [["cash","💵 Cash","#059669"],["noncash","🏦 Non-Cash","#7c3aed"]].map(([v,l,c])=>
+            React.createElement("button",{key:v,onClick:()=>setForm(f=>({...f,payType:v})),style:{flex:1,padding:"9px",borderRadius:12,border:"2px solid "+(form.payType===v?c:"#e2e8f0"),background:form.payType===v?c+"15":"#fff",color:form.payType===v?c:"#718096",cursor:"pointer",fontWeight:600,fontSize:13}},l)
+          )
+        )
+      ),
+
+      /* Client */
+      React.createElement("div",{style:{marginBottom:14}},
+        React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:6,letterSpacing:1}},"CLIENT DETAILS"),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:8}},
+          React.createElement("input",{value:form.client,onChange:e=>setForm(f=>({...f,client:e.target.value})),placeholder:"Client Name *",style:inp()}),
+          React.createElement("input",{value:form.clientPhone||"",onChange:e=>setForm(f=>({...f,clientPhone:e.target.value})),placeholder:"Phone Number",style:inp()})
+        ),
+        React.createElement("input",{value:form.clientAddress||"",onChange:e=>setForm(f=>({...f,clientAddress:e.target.value})),placeholder:"Full Address",style:{...inp(),marginBottom:8}}),
+        React.createElement("input",{value:form.location,onChange:e=>setForm(f=>({...f,location:e.target.value})),placeholder:"Location / Area",style:inp()})
+      ),
+
+      /* Date */
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}},
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"DATE"),React.createElement("input",{type:"date",value:form.date,onChange:e=>setForm(f=>({...f,date:e.target.value})),style:inp()})),
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"INVOICE NO"),React.createElement("input",{value:form.invoiceNo,onChange:e=>setForm(f=>({...f,invoiceNo:e.target.value})),style:inp()})),
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"STATUS"),React.createElement("select",{value:form.status,onChange:e=>setForm(f=>({...f,status:e.target.value})),style:inp()},Object.entries(STATUS).map(([k,v])=>React.createElement("option",{key:k,value:k},v.label)))),
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"DUE DATE"),React.createElement("input",{type:"date",value:form.dueDate||"",onChange:e=>setForm(f=>({...f,dueDate:e.target.value})),style:inp()}))
+      ),
+
+      React.createElement("textarea",{value:form.desc,onChange:e=>setForm(f=>({...f,desc:e.target.value})),rows:2,placeholder:"Work description...",style:{...inp(),resize:"vertical",marginBottom:14}}),
+
+      /* Reminder */
+      React.createElement("div",{style:{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"10px 14px",marginBottom:14}},
+        React.createElement("div",{style:{color:"#92400e",fontSize:12,fontWeight:700,marginBottom:8}},"🔔 REMINDER"),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}},
+          React.createElement("input",{type:"date",value:form.reminder||"",onChange:e=>setForm(f=>({...f,reminder:e.target.value})),style:inp({fontSize:13})}),
+          React.createElement("input",{value:form.reminderNote||"",onChange:e=>setForm(f=>({...f,reminderNote:e.target.value})),placeholder:"Note...",style:inp({fontSize:13})})
+        )
+      ),
+
+      /* Items tabs */
+      React.createElement("div",{style:{marginBottom:14}},
+        React.createElement("div",{style:{display:"flex",gap:6,marginBottom:10,overflowX:"auto"}},
+          [["presets",wt?.icon+" "+wt?.label+" Rates"],["custom","✏️ Custom"],["shop","🛒 Shop"]].map(([id,label])=>
+            React.createElement("button",{key:id,onClick:()=>setTab(id),style:{padding:"8px 14px",borderRadius:10,border:"none",background:tab===id?wt?.color||"#1a1a2e":"#f0f2f5",color:tab===id?"#fff":"#718096",cursor:"pointer",fontWeight:600,fontSize:12,flexShrink:0,whiteSpace:"nowrap"}},label)
+          )
+        ),
+
+        /* Presets */
+        tab==="presets"&&React.createElement("div",null,
+          presets.length===0
+            ?React.createElement("div",{style:{textAlign:"center",padding:"20px",color:"#718096",fontSize:13}},"Custom Item use பண்ணு")
+            :React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+              presets.map(preset=>{
+                const v=presetVals[preset.id]||{qty:"",rate:preset.defaultRate};
+                return React.createElement("div",{key:preset.id,style:{background:"#f8fafc",borderRadius:12,padding:"10px 12px",border:"1px solid #e2e8f0"}},
+                  React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10}},
+                    React.createElement("div",{style:{flex:1}},
+                      React.createElement("div",{style:{color:"#1a1a2e",fontWeight:600,fontSize:14}},preset.name),
+                      React.createElement("div",{style:{color:"#718096",fontSize:12}},"per "+preset.unit)
+                    ),
+                    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6}},
+                      React.createElement("div",{style:{textAlign:"center"}},
+                        React.createElement("div",{style:{color:"#718096",fontSize:10,marginBottom:2}},"Rate (Rs.)"),
+                        React.createElement("input",{type:"number",value:v.rate,onChange:e=>setPV(pv=>({...pv,[preset.id]:{...pv[preset.id],rate:e.target.value}})),style:{width:80,padding:"6px 8px",borderRadius:8,border:"1px solid "+(wt?.color||"#ddd")+"44",fontSize:13,textAlign:"right",outline:"none",color:"#1a1a2e",background:"#fff",fontWeight:700}})
+                      ),
+                      React.createElement("div",{style:{textAlign:"center"}},
+                        React.createElement("div",{style:{color:"#718096",fontSize:10,marginBottom:2}},"Qty"),
+                        React.createElement("input",{type:"number",value:v.qty,onChange:e=>setPV(pv=>({...pv,[preset.id]:{...pv[preset.id],qty:e.target.value}})),placeholder:"0",onKeyDown:e=>e.key==="Enter"&&addPreset(preset),style:{width:60,padding:"6px 8px",borderRadius:8,border:"1px solid #e2e8f0",fontSize:13,textAlign:"center",outline:"none",color:"#1a1a2e",background:"#fff"}})
+                      ),
+                      React.createElement("button",{onClick:()=>addPreset(preset),style:{padding:"6px 12px",borderRadius:8,border:"none",background:wt?.color||"#1a1a2e",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:14,marginTop:12}},"+")
+                    )
+                  ),
+                  v.qty&&v.rate&&React.createElement("div",{style:{color:wt?.color,fontSize:12,fontWeight:600,textAlign:"right",marginTop:4}},"= "+Rs(+v.qty*+v.rate))
+                );
+              })
+            )
+        ),
+
+        /* Custom */
+        tab==="custom"&&React.createElement("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr auto",gap:6}},
+          React.createElement("input",{placeholder:"Item / Labour",value:newItem.name,onChange:e=>setNI(n=>({...n,name:e.target.value})),onKeyDown:e=>e.key==="Enter"&&addCustom(),style:inp({fontSize:13})}),
+          React.createElement("input",{type:"number",placeholder:"Qty",value:newItem.qty,onChange:e=>setNI(n=>({...n,qty:e.target.value})),style:inp({fontSize:13})}),
+          React.createElement("select",{value:newItem.unit,onChange:e=>setNI(n=>({...n,unit:e.target.value})),style:inp({fontSize:13})},UNITS.map(u=>React.createElement("option",{key:u},u))),
+          React.createElement("input",{type:"number",placeholder:"Rate",value:newItem.rate,onChange:e=>setNI(n=>({...n,rate:e.target.value})),style:inp({fontSize:13})}),
+          React.createElement("button",{onClick:addCustom,style:{padding:"9px 14px",borderRadius:10,border:"none",background:"#059669",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:18}},"+")
+        ),
+
+        /* Shop */
+        tab==="shop"&&React.createElement("div",null,
+          React.createElement("div",{style:{background:"#f5f3ff",border:"1px solid #ddd6fe",borderRadius:10,padding:"8px 12px",marginBottom:10,fontSize:12,color:"#6d28d9"}},"🛒 வேற கடையில் வாங்கின materials"),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr auto",gap:6}},
+            React.createElement("input",{placeholder:"Shop name",value:newShop.shop,onChange:e=>setNS(n=>({...n,shop:e.target.value})),style:inp({fontSize:13})}),
+            React.createElement("input",{placeholder:"Item",value:newShop.item,onChange:e=>setNS(n=>({...n,item:e.target.value})),style:inp({fontSize:13})}),
+            React.createElement("input",{type:"number",placeholder:"Qty",value:newShop.qty,onChange:e=>setNS(n=>({...n,qty:e.target.value})),style:inp({fontSize:13})}),
+            React.createElement("input",{type:"number",placeholder:"Rate",value:newShop.rate,onChange:e=>setNS(n=>({...n,rate:e.target.value})),style:inp({fontSize:13})}),
+            React.createElement("button",{onClick:addShop,style:{padding:"9px 14px",borderRadius:10,border:"none",background:"#7c3aed",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:18}},"+")
+          )
+        ),
+
+        /* Added items */
+        items.length>0&&React.createElement("div",{style:{marginTop:12,background:"#f8fafc",borderRadius:12,overflow:"hidden",border:"1px solid #e2e8f0"}},
+          React.createElement("div",{style:{padding:"8px 12px",background:wt?.light,color:wt?.color,fontSize:12,fontWeight:700}},"✅ Added Items"),
+          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:13}},
+            React.createElement("tbody",null,
+              items.map(i=>React.createElement("tr",{key:i.id,style:{borderTop:"1px solid #e2e8f0"}},
+                React.createElement("td",{style:{padding:"7px 10px",fontWeight:500}},i.name),
+                React.createElement("td",{style:{padding:"7px 10px",color:"#718096"}},i.qty+" "+i.unit),
+                React.createElement("td",{style:{padding:"7px 10px",color:"#718096"}},Rs(i.rate)),
+                React.createElement("td",{style:{padding:"7px 10px",fontWeight:700,color:wt?.color}},Rs(i.total)),
+                React.createElement("td",{style:{padding:"7px 10px"}},React.createElement("button",{onClick:()=>setItems(is=>is.filter(x=>x.id!==i.id)),style:{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:16}},"✕"))
+              )),
+              React.createElement("tr",{style:{borderTop:"2px solid #e2e8f0",background:wt?.light}},
+                React.createElement("td",{colSpan:3,style:{padding:"8px 10px",fontWeight:700}},"Items Total"),
+                React.createElement("td",{colSpan:2,style:{padding:"8px 10px",fontWeight:800,color:wt?.color}},Rs(itemsTotal))
+              )
+            )
+          )
+        ),
+        shops.length>0&&React.createElement("div",{style:{marginTop:10,background:"#faf5ff",borderRadius:12,overflow:"hidden",border:"1px solid #ddd6fe"}},
+          React.createElement("div",{style:{padding:"8px 12px",background:"#ede9fe",color:"#7c3aed",fontSize:12,fontWeight:700}},"🛒 Shop Purchases"),
+          React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:13}},
+            React.createElement("tbody",null,
+              shops.map(s=>React.createElement("tr",{key:s.id,style:{borderTop:"1px solid #e9d5ff"}},
+                React.createElement("td",{style:{padding:"7px 10px",color:"#7c3aed",fontWeight:600}},s.shop),
+                React.createElement("td",{style:{padding:"7px 10px"}},s.item),
+                React.createElement("td",{style:{padding:"7px 10px",color:"#718096"}},s.qty+" × "+Rs(s.rate)),
+                React.createElement("td",{style:{padding:"7px 10px",fontWeight:700}},Rs(s.total)),
+                React.createElement("td",{style:{padding:"7px 10px"}},React.createElement("button",{onClick:()=>setShops(ss=>ss.filter(x=>x.id!==s.id)),style:{background:"none",border:"none",color:"#dc2626",cursor:"pointer",fontSize:16}},"✕"))
+              )),
+              React.createElement("tr",{style:{borderTop:"2px solid #ddd6fe",background:"#ede9fe"}},
+                React.createElement("td",{colSpan:3,style:{padding:"8px 10px",fontWeight:700}},"Shop Total"),
+                React.createElement("td",{colSpan:2,style:{padding:"8px 10px",fontWeight:800,color:"#7c3aed"}},Rs(shopsTotal))
+              )
+            )
+          )
+        )
+      ),
+
+      /* Payment */
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}},
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"AMOUNT RECEIVED (Rs.)"),React.createElement("input",{type:"number",value:form.received,onChange:e=>setForm(f=>({...f,received:e.target.value})),placeholder:"0",style:inp()})),
+        React.createElement("div",null,React.createElement("label",{style:{color:"#718096",fontSize:11,fontWeight:700,display:"block",marginBottom:4}},"PAYMENT STATUS"),React.createElement("select",{value:form.payStatus,onChange:e=>setForm(f=>({...f,payStatus:e.target.value})),style:inp()},Object.entries(PAY).map(([k,v])=>React.createElement("option",{key:k,value:k},v.label))))
+      ),
+      total>0&&React.createElement("div",{style:{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"10px 14px",marginBottom:16,display:"flex",justifyContent:"space-between"}},
+        React.createElement("span",{style:{color:"#718096",fontSize:13}},"Grand Total: ",React.createElement("strong",{style:{color:"#1a1a2e",fontSize:15}},Rs(total))),
+        React.createElement("span",{style:{color:"#dc2626",fontWeight:700,fontSize:13}},"Balance: "+Rs(total-(+form.received||0)))
+      ),
+      React.createElement("div",{style:{display:"flex",gap:10}},
+        React.createElement("button",{onClick:save,style:{flex:1,padding:14,borderRadius:12,border:"none",background:"#1a1a2e",color:"#fff",fontWeight:700,cursor:"pointer",fontSize:15}},"💾 Save Project"),
+        React.createElement("button",{onClick:onClose,style:{padding:14,borderRadius:12,border:"1px solid #e2e8f0",background:"#fff",color:"#718096",cursor:"pointer",fontSize:15}},"Cancel")
+      )
+    )
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   A4 DOCUMENT
+══════════════════════════════════════════════════════════════ */
+function A4Doc({project:p,type,logoUrl,owner,itemsT,shopT,grandTotal,bal}){
+  const gt=grandTotal(p);const st=shopT(p);const it=itemsT(p);const b=bal(p);
+  const isQ=type==="quotation";
+  const wt=WORK_TYPES.find(t=>t.id===p.type);
+  const cell=(s={})=>({padding:"9px 12px",borderBottom:"1px solid #e8e8e8",...s});
+  return React.createElement("div",{style:{background:"#fff",fontFamily:"Georgia,serif",fontSize:"10.5pt",color:"#111",border:"1px solid #ddd",borderRadius:8,overflow:"hidden"}},
+    /* Header */
+    React.createElement("div",{className:"doc-header",style:{background:"#1a1a2e",padding:"18px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}},
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:14}},
+        logoUrl?React.createElement("div",{style:{width:72,height:72,borderRadius:10,overflow:"hidden",background:"#fff",padding:3,flexShrink:0}},React.createElement("img",{src:logoUrl,style:{width:"100%",height:"100%",objectFit:"contain"}}))
+               :React.createElement("div",{style:{width:60,height:60,borderRadius:10,background:"#16213e",border:"2px solid #0f3460",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0}},"🏗️"),
+        React.createElement("div",null,
+          React.createElement("div",{style:{color:"#fff",fontWeight:800,fontSize:"18pt",lineHeight:1}},owner.name),
+          React.createElement("div",{style:{color:"#94a3b8",fontSize:"9pt",marginTop:3}},wt?.icon+" "+wt?.label+" Contractor"),
+          React.createElement("div",{style:{color:"#94a3b8",fontSize:"9pt",marginTop:4}},"📞 "+owner.phone+"   |   ✉️ "+owner.email)
+        )
+      ),
+      React.createElement("div",{style:{textAlign:"right",flexShrink:0}},
+        React.createElement("div",{className:"doc-badge",style:{background:isQ?"#2563eb":"#059669",color:"#fff",fontWeight:800,fontSize:"14pt",letterSpacing:2,padding:"5px 16px",borderRadius:8,marginBottom:6,display:"inline-block"}},isQ?"QUOTATION":"INVOICE"),
+        React.createElement("div",{style:{color:"#94a3b8",fontSize:"9pt"}},"No: ",React.createElement("strong",{style:{color:"#fff"}},p.invoiceNo)),
+        React.createElement("div",{style:{color:"#94a3b8",fontSize:"9pt",marginTop:2}},"Date: ",React.createElement("span",{style:{color:"#e2e8f0"}},fmtD(p.date))),
+        p.dueDate&&React.createElement("div",{style:{color:"#fca5a5",fontSize:"9pt",marginTop:2}},"Due: "+fmtD(p.dueDate))
+      )
+    ),
+    /* Bill to / From */
+    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",background:"#f8f9fa",borderBottom:"2px solid #e2e8f0"}},
+      React.createElement("div",{style:{padding:"14px 20px",borderRight:"1px solid #e2e8f0"}},
+        React.createElement("div",{style:{color:"#718096",fontSize:"8.5pt",fontWeight:700,letterSpacing:1,marginBottom:6}},"BILL TO:"),
+        React.createElement("div",{style:{color:"#111",fontWeight:700,fontSize:"13pt"}},p.client),
+        p.clientPhone&&React.createElement("div",{style:{color:"#444",fontSize:"10pt",marginTop:3}},"📞 "+p.clientPhone),
+        p.clientAddress&&React.createElement("div",{style:{color:"#444",fontSize:"10pt",marginTop:2}},"📍 "+p.clientAddress),
+        !p.clientAddress&&p.location&&React.createElement("div",{style:{color:"#444",fontSize:"10pt",marginTop:2}},"📍 "+p.location)
+      ),
+      React.createElement("div",{style:{padding:"14px 20px"}},
+        React.createElement("div",{style:{color:"#718096",fontSize:"8.5pt",fontWeight:700,letterSpacing:1,marginBottom:6}},"FROM:"),
+        React.createElement("div",{style:{color:"#111",fontWeight:700,fontSize:"12pt"}},owner.name),
+        React.createElement("div",{style:{color:"#444",fontSize:"10pt",marginTop:3}},"📞 "+owner.phone),
+        React.createElement("div",{style:{color:"#444",fontSize:"10pt",marginTop:2}},"✉️ "+owner.email)
+      )
+    ),
+    p.desc&&React.createElement("div",{style:{padding:"8px 20px",background:"#fffbeb",borderBottom:"1px solid #fde68a",color:"#92400e",fontSize:"9.5pt"}},React.createElement("strong",null,"Work:")," "+p.desc),
+    /* Items table */
+    React.createElement("table",{className:"doc-table",style:{width:"100%",borderCollapse:"collapse",fontSize:"10pt"}},
+      React.createElement("thead",null,React.createElement("tr",{style:{background:"#1a1a2e"}},
+        ["#","Description","Qty","Unit","Unit Price","Amount"].map((h,i)=>React.createElement("th",{key:h,style:{padding:"9px 12px",color:"#fff",fontWeight:700,fontSize:"9pt",textAlign:i===0?"center":i>=4?"right":"left"}},h))
+      )),
+      React.createElement("tbody",null,
+        p.items.map((item,idx)=>React.createElement("tr",{key:item.id,style:{background:idx%2===0?"#fff":"#f8f9fa"}},
+          React.createElement("td",{style:{...cell(),textAlign:"center",color:"#718096",fontWeight:600}},idx+1),
+          React.createElement("td",{style:{...cell(),fontWeight:500}},item.name),
+          React.createElement("td",{style:{...cell(),textAlign:"center"}},item.qty),
+          React.createElement("td",{style:cell()},item.unit),
+          React.createElement("td",{style:{...cell(),textAlign:"right"}},Rs(item.rate)),
+          React.createElement("td",{style:{...cell(),textAlign:"right",fontWeight:700}},Rs(item.total))
+        )),
+        React.createElement("tr",{style:{background:"#f0f0f0"}},
+          React.createElement("td",{colSpan:5,style:{padding:"8px 12px",fontWeight:700,textAlign:"right"}},"Work Items Sub Total"),
+          React.createElement("td",{style:{padding:"8px 12px",fontWeight:800,textAlign:"right"}},Rs(it))
+        )
+      )
+    ),
+    /* Shop purchases */
+    (p.shopPurchases||[]).length>0&&React.createElement("div",null,
+      React.createElement("div",{className:"shop-head",style:{padding:"8px 20px",background:"#ede9fe",borderTop:"2px solid #c4b5fd",fontSize:"9.5pt",color:"#6d28d9",fontWeight:700}},"🛒 Shop Purchases / External Materials"),
+      React.createElement("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:"10pt"}},
+        React.createElement("thead",null,React.createElement("tr",{style:{background:"#f5f3ff"}},["Shop","Item","Qty","Rate","Amount"].map((h,i)=>React.createElement("th",{key:h,style:{padding:"8px 12px",color:"#7c3aed",fontWeight:700,fontSize:"9pt",textAlign:i>=3?"right":"left"}},h)))),
+        React.createElement("tbody",null,
+          (p.shopPurchases||[]).map((s,idx)=>React.createElement("tr",{key:s.id,style:{background:idx%2===0?"#fff":"#faf5ff",borderBottom:"1px solid #e9d5ff"}},
+            React.createElement("td",{style:{padding:"8px 12px",color:"#7c3aed",fontWeight:600}},s.shop),
+            React.createElement("td",{style:{padding:"8px 12px"}},s.item),
+            React.createElement("td",{style:{padding:"8px 12px"}},s.qty),
+            React.createElement("td",{style:{padding:"8px 12px",textAlign:"right"}},Rs(s.rate)),
+            React.createElement("td",{style:{padding:"8px 12px",textAlign:"right",fontWeight:700}},Rs(s.total))
+          )),
+          React.createElement("tr",{style:{background:"#ede9fe",borderTop:"2px solid #c4b5fd"}},
+            React.createElement("td",{colSpan:4,style:{padding:"8px 12px",fontWeight:700,textAlign:"right"}},"Shop Sub Total"),
+            React.createElement("td",{style:{padding:"8px 12px",fontWeight:800,textAlign:"right"}},Rs(st))
+          )
+        )
+      )
+    ),
+    /* Totals */
+    React.createElement("div",{style:{padding:"14px 24px 18px",borderTop:"3px double #1a1a2e"}},
+      React.createElement("div",{style:{maxWidth:300,marginLeft:"auto"}},
+        st>0&&React.createElement("div",null,
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",padding:"4px 0",color:"#444",fontSize:"10pt"}},React.createElement("span",null,"Work Items Total"),React.createElement("span",{style:{fontWeight:600}},Rs(it))),
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",padding:"4px 0",color:"#7c3aed",fontSize:"10pt"}},React.createElement("span",null,"Shop Purchases"),React.createElement("span",{style:{fontWeight:600}},Rs(st)))
+        ),
+        !isQ&&p.received>0&&React.createElement("div",{style:{display:"flex",justifyContent:"space-between",padding:"4px 0",color:"#059669",fontSize:"10pt"}},React.createElement("span",null,"Amount Received"),React.createElement("span",{style:{fontWeight:600}},"- "+Rs(p.received))),
+        React.createElement("div",{className:"doc-total-bar",style:{display:"flex",justifyContent:"space-between",padding:"11px 16px",marginTop:8,background:"#1a1a2e",borderRadius:8,color:"#fff"}},
+          React.createElement("span",{style:{fontWeight:700,fontSize:"13pt"}},isQ?"Grand Total":"Balance Due"),
+          React.createElement("span",{style:{fontWeight:800,fontSize:"15pt"}},Rs(isQ?gt:b))
+        ),
+        !isQ&&gt>0&&React.createElement("div",{style:{textAlign:"right",color:"#718096",fontSize:"9.5pt",marginTop:5}},"Grand Total: "+Rs(gt))
+      )
+    ),
+    /* Footer */
+    React.createElement("div",{style:{padding:"12px 24px 18px",background:"#f8f9fa",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",alignItems:"flex-end"}},
+      React.createElement("div",null,
+        React.createElement("div",{style:{color:"#444",fontSize:"9.5pt"}},isQ?"✅ This quotation is valid for 30 days.":"✅ Thank you for your business!"),
+        React.createElement("div",{style:{color:"#718096",fontSize:"9pt",marginTop:3}},"📞 "+owner.phone+"   ✉️ "+owner.email)
+      ),
+      React.createElement("div",{style:{textAlign:"right"}},
+        React.createElement("div",{style:{color:"#718096",fontSize:"9pt",marginBottom:22}},"Authorized Signature"),
+        React.createElement("div",{style:{borderTop:"1px solid #111",paddingTop:4}},
+          React.createElement("div",{style:{color:"#111",fontWeight:700,fontSize:"10.5pt"}},owner.name),
+          React.createElement("div",{style:{color:"#718096",fontSize:"9pt"}},wt?.label+" Contractor")
+        )
+      )
+    )
+  );
+}
+
+/* ── Boot ── */
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(React.createElement(App));
+  </script>
+</body>
+</html>
